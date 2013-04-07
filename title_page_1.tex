@@ -94,10 +94,33 @@ In Unix file system, we treat file and directory as inode. Similarly, VFS also u
 Since the size of inode  is fixed(typically 2K in fast file system), the number of indirect block pointer fields will decrease after adding new fields and it will result in reduced max file size under approximately 10\% which is acceptable.\\[1em]
 Although Record and Head Pointer field is only used in current version inode and waste some space in old versions, the old version is read only and inode is fixed size. Consequently, it is meaningless to free these fields in the old version inode.
 \subsection{Memory Management}
+\subsubsection{Copy-on-write}
 When a new version is created, it is too waste to copy all the block in the old version. So copy-on-write(abbreviated COW) is adopted to implement multiple versions of data compactly. The system needs to create a new physical version of a file only when data changes. Frequently, physical versions have much data in common. The COW allows versions to share a single copy of file system blocks for common data and have their own copy of data that have changed. As a result, it extremely improves the memory utilization in the system.\\[1em]How COW works is showed in the following steps:
 \begin{enumerate}
-\item When a user open a file or directory,
+\item When users open a file or directory, a new inode is duplicated with different inode number and same block references.
+\item When users have modified something, the system will allocate new blocks to store modified blocks. The block reference in the new inode will point to the new allocated block and the old one remains unchanged, at the same time, the bitmap in the new inode will also update. 
+\item When users finally closed the file, the system check whether the bitmap is all zero. If it is, it means nothing changes and the new inode will free. Otherwise, a new version of inode is finished.
 \end{enumerate}
+\subsubsection{Bitmap and Garbage Collection} 
+It is a very common case that applications truncate a file to zero length as a first step when rewriting that file. On truncate, with checking the bitmap, the system deallocates only those blocks that have been written in the current open progress instead of allocating new blocks to duplicated COW.\\[1em]
+When the disk is almost full, the system also support garbage collection by scanning inode table and freeing the oldest inode sublist of each current inode which discussed in layout section.
+\subsection{Layout}
+
+\subsection{Interfaces and Manipulating Old Versions}
+\subsubsection{File system operation}
+The system supports all the standard Unix file system operations as follows:
+\begin{itemize}
+\item \textbf{read} - 
+\item \textbf{write} - 
+\item \textbf{open/create} - 
+\item \textbf{rename} - 
+\item \textbf{link} - 
+\item \textbf{unlink} - 
+\item \textbf{symlink} - 
+\item \textbf{mkdir} - 
+\item \textbf{chdir} - 
+\item \textbf{stat} -
+\end{itemize}
 \section{Analysis}
 \section{Conclusion}
 \section{Acknowledgment}

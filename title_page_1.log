@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.4-1.40.13 (TeX Live 2012) (format=pdflatex 2012.6.30)  6 APR 2013 09:38
+This is pdfTeX, Version 3.1415926-2.4-1.40.13 (TeX Live 2012) (format=pdflatex 2012.6.30)  7 APR 2013 13:04
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -52,25 +52,35 @@ LaTeX Font Info:    ... okay on input line 32.
  [1
 
 {/usr/local/texlive/2012/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] [1] [2]
- [3] (./title_page_1.aux) ) 
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 113.
+
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/base/omscmr.fd
+File: omscmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
+)
+LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <12> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 113.
+ [3] [4]
+(./title_page_1.aux) ) 
 Here is how much of TeX's memory you used:
- 221 strings out of 493488
- 2470 string characters out of 3141326
+ 239 strings out of 493488
+ 2787 string characters out of 3141326
  52432 words of memory out of 3000000
- 3609 multiletter control sequences out of 15000+200000
- 7613 words of font info for 27 fonts, out of 3000000 for 9000
+ 3624 multiletter control sequences out of 15000+200000
+ 7870 words of font info for 28 fonts, out of 3000000 for 9000
  957 hyphenation exceptions out of 8191
  22i,4n,19p,657b,199s stack positions out of 5000i,500n,10000p,200000b,50000s
-</usr/local/texlive/2012/texmf-dist/fonts/type1/publ
-ic/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/publi
-c/amsfonts/cm/cmcsc10.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/publi
-c/amsfonts/cm/cmr12.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/
-amsfonts/cm/cmr17.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/am
-sfonts/cm/cmti12.pfb>
-Output written on title_page_1.pdf (4 pages, 69421 bytes).
+</usr/local/texlive/2012/texmf-dist/fonts/type1/public/am
+sfonts/cm/cmbx12.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/ams
+fonts/cm/cmcsc10.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/ams
+fonts/cm/cmr12.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfo
+nts/cm/cmr17.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfont
+s/cm/cmsy10.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts
+/cm/cmti12.pfb>
+Output written on title_page_1.pdf (5 pages, 79444 bytes).
 PDF statistics:
- 37 PDF objects out of 1000 (max. 8388607)
- 25 compressed objects within 1 object stream
+ 44 PDF objects out of 1000 (max. 8388607)
+ 30 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
