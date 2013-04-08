@@ -110,17 +110,16 @@ When the disk is almost full, the system also support garbage collection by scan
 \subsubsection{File system operation}
 The system supports all the standard Unix file system operations as follows:
 \begin{itemize}
-\item \textbf{read} - 
-\item \textbf{write} - 
-\item \textbf{open/create} - 
-\item \textbf{rename} - 
-\item \textbf{link} - 
-\item \textbf{unlink} - 
-\item \textbf{symlink} - 
-\item \textbf{mkdir} - 
-\item \textbf{chdir} - 
-\item \textbf{stat} -
+\item \textbf{write} - When write something, the system will check the bitmap, then COW is triggered to allocate new blocks or only update the newly allocated blocks.
+\item \textbf{open/create} - A new inode is duplicated or created with different inode number and some other fields. But they share the same block pointers.
+\item \textbf{close} - Check bitmap to decide whether the system free the inode. If not, add timestamp, next fields and do correspondent layout operation.
+\item \textbf{rename} - Combination with unlink and link as follows.
+\item \textbf{unlink} - If link count drops to zero, the inode will not free and the user can still access the old version of that unlinked file.
+\item \textbf{mkdir} - Create a new inode related to the new directory
+\item \textbf{read, chdir, symlink, link, stat} - The same as origin Unix file system
 \end{itemize}
+\subsubsection{Accessing Old Version}
+
 \section{Analysis}
 \section{Conclusion}
 \section{Acknowledgment}
