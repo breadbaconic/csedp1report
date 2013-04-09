@@ -119,8 +119,16 @@ The system supports all the standard Unix file system operations as follows:
 \item \textbf{read, chdir, symlink, link, stat} - The same as origin Unix file system
 \end{itemize}
 \subsubsection{Accessing Old Version}
-
+User can access any version of file or directories by appending @ and timestamp, such as:  \textbf{cd /home/sb@362480234}\\[1em]When the system resolve the file or directory names, it reads from right to left and regard the last @ and number as version specifier. Hence, it can distinguish the version specifier from @ and numbers in its origin name.\\[1em]
+When the system gets wrong timestamp, it will search the inode sublist and give a nearest version.\\[1em]
+To meet the demand that users want to know how many versions created. A new operations is  introduced:
+\begin{itemize}
+\item \textbf{lstv \underline{name}} - \underline{name} is a file or directory name, and lstv lists all the versions of it with correspondent timestamps.
+\end{itemize}
+In our consideration, there is another layer between the VFS and users. The application in that layer translates annoy things like timestamp to more user-friendly interfaces such as index search. Therefore, for simplicity, the VFS only provides uniformed timestamp interface.
 \section{Analysis}
+\subsection{Use Cases}
+\subsection{Alternative Approach}
 \section{Conclusion}
 \section{Acknowledgment}
 \end{document}
