@@ -81,44 +81,47 @@ YuWei Zhou  \textsc{11302010067}\\[3cm]% Your name
 
 \end{titlepage}
 
-\section{Introduction}The goal of this design project is to create a versioning file system. The versioning or continuous snapshotting file system is defined to store all versions of each file over time. When user modifies a file or  a directory, the versioning file system create a new version after closing the file or directory and store the old version which can be only read by users. \\[1em]To implement this system, The whole design will solve two major problem: how to maintain the old version and how to manipulate them, as well as achieving low access time and better space utilization under common use cases.
-\section{Design Description}
+\section*{1~~~~Introduction}The goal of this design project is to create a versioning file system. The versioning or continuous snapshotting file system is defined to store all versions of each file over time. When user modifies a file or  a directory, the versioning file system create a new version after closing the file or directory and store the old version which can be only read by users. \\[1em]To implement this system, The whole design will solve two major problem: how to maintain the old version and how to manipulate them, as well as achieving low access time and better space utilization under common use cases.
+\section*{2~~~~Design Description}
 The versioning file system(VFS) represents different versions of a file or directory as different inodes which is based on the inodes in Unix file system. Therefore, we need add extra fields to origin inode data structure. Then, a new layout and management is required to maintain the huge number of inodes and data blocks. Finally, some interfaces is adopted to let users manipulate different versions easily.
-\subsection{Data Structure}
-In Unix file system, we treat file and directory as inode. Similarly, VFS also use inode and there are several fields are added to both the on-disk and in-memory representation of the inode as mentioned below. 
+\section*{2.1~~~~Data Structure}
+\section*{2.1.1~~~~On-disk Structure}
+In Unix file system, we treat file and directory as inode on the disk. Similarly, VFS also use inode and there are several fields are added to it as mentioned below. 
 \paragraph{Timestamp}When a new version is created, a unsigned integer is recorded, representing the number of seconds passed since a epoch which is predefined in the system. If the unsigned integer is 32 bit, the timestamp allows the system to represent about 132 years after the epoch(typically 1970.1.1) which is enough to current system, and it is easy to extend to 64 bit when we need to represent more time. 
-\paragraph{Bitmap}The system embeds bitmaps in inodes and indirect blocks that allow system to record which blocks have had a copy-on-write performed which will discuss in memory management section. A bit of value 0 indicates that a new block needs to be allocated on the next write and bit value 1 indicates that a new allocation of this block has been performed.
+\paragraph{Bitmap}The system embeds bitmaps in inodes and indirect blocks that allow system to record which blocks have had a copy-on-write performed which will discuss in memory management section. A bit of value 0 indicates that a new block needs to be allocated on the next write and bit value 1 indicates that a new allocation of this block has been performed. The size of Bitmap is mainly the overhead of extra fields but we think it worth costing it to optimize performance.
 \paragraph{Next}A pointer to the next old version of an inode. Through this field, we can search a specific version of an inode like an linked list, and the current version inode is the head of linked list. Since the performance of it may not so considerable, a optimized structure will discuss in layout section.
 \paragraph{Record}When a user want excludes a file or directory from versioning, an extra bit is employed to indicate it. a bit of value 0 is versioning which is default, and one is not versioning. When the system wants to create a new version, it will first exam this bit and decide whether to do subsequent things.
 \paragraph{Head Pointer}A pointer to a block containing addresses of the head of sublists of inodes discussed in layout section. \\[1em]
 Since the size of inode  is fixed(typically 2K in fast file system), the number of indirect block pointer fields will decrease after adding new fields and it will result in reduced max file size under approximately 10\% which is acceptable.\\[1em]
 Although Record and Head Pointer field is only used in current version inode and waste some space in old versions, the old version is read only and inode is fixed size. Consequently, it is meaningless to free these fields in the old version inode.
-\subsection{Memory Management}
-\subsubsection{Copy-on-write}
+\section*{2.2.2~~~~In-memory Structure}
+
+\section*{2.2~~~~Memory Management}
+\section*{2.2.1~~~~Copy-on-write}
 When a new version is created, it is too waste to copy all the block in the old version. So copy-on-write(abbreviated COW) is adopted to implement multiple versions of data compactly. The system needs to create a new physical version of a file only when data changes. Frequently, physical versions have much data in common. The COW allows versions to share a single copy of file system blocks for common data and have their own copy of data that have changed. As a result, it extremely improves the memory utilization in the system.\\[1em]How COW works is showed in the following steps:
 \begin{enumerate}
 \item When users open a file or directory, a new inode is duplicated with different inode number and same block references.
 \item When users have modified something, the system will allocate new blocks to store modified blocks. The block reference in the new inode will point to the new allocated block and the old one remains unchanged, at the same time, the bitmap in the new inode will also update. 
 \item When users finally closed the file, the system check whether the bitmap is all zero. If it is, it means nothing changes and the new inode will free. Otherwise, a new version of inode is finished.
 \end{enumerate}
-\subsubsection{Bitmap and Garbage Collection} 
-It is a very common case that applications truncate a file to zero length as a first step when rewriting that file. On truncate, with checking the bitmap, the system deallocates only those blocks that have been written in the current open progress instead of allocating new blocks to duplicated COW.\\[1em]
-When the disk is almost full, the system also support garbage collection by scanning inode table and freeing the oldest inode sublist of each current inode which discussed in layout section.
-\subsection{Layout}
+\section*{2.2.2~~~~Garbage Collection} 
+When the disk is almost full(A predefined constant such as 90\%), the system also support garbage collection by repeatedly scanning inode table and freeing the oldest inode sublist(discussed in layout section) of each current inode till the space decreased to another predefined constant such as 80\%.
+\section*{2.3~~~~Layout}
 
-\subsection{Interfaces and Manipulating Old Versions}
-\subsubsection{File system operation}
+\section*{2.4~~~~Interfaces and Manipulating Old Versions}
+\section*{2.4.1~~~~File System Operation}
 The system supports all the standard Unix file system operations as follows:
 \begin{itemize}
 \item \textbf{write} - When write something, the system will check the bitmap, then COW is triggered to allocate new blocks or only update the newly allocated blocks.
-\item \textbf{open/create} - A new inode is duplicated or created with different inode number and some other fields. But they share the same block pointers.
+\item \textbf{open} - A new inode is duplicated with different inode number and some other fields, but they share the same block pointers. If a read-only file is opened or the Record field is one, the system dose not duplicated the inode like the Unix file system.
+\item \textbf{create} - A new inode is created as Unix file system. However, user can explicitly set the the file is not versioning which sets the Record field to one.
 \item \textbf{close} - Check bitmap to decide whether the system free the inode. If not, add timestamp, next fields and do correspondent layout operation.
 \item \textbf{rename} - Combination with unlink and link as follows.
 \item \textbf{unlink} - If link count drops to zero, the inode will not free and the user can still access the old version of that unlinked file.
 \item \textbf{mkdir} - Create a new inode related to the new directory
 \item \textbf{read, chdir, symlink, link, stat} - The same as origin Unix file system
 \end{itemize}
-\subsubsection{Accessing Old Version}
+\section*{2.4.2~~~~Accessing Old Version}
 User can access any version of file or directories by appending @ and timestamp, such as:  \textbf{cd /home/sb@362480234}\\[1em]When the system resolve the file or directory names, it reads from right to left and regard the last @ and number as version specifier. Hence, it can distinguish the version specifier from @ and numbers in its origin name.\\[1em]
 When the system gets wrong timestamp, it will search the inode sublist and give a nearest version.\\[1em]
 To meet the demand that users want to know how many versions created. A new operations is  introduced:
@@ -126,9 +129,19 @@ To meet the demand that users want to know how many versions created. A new oper
 \item \textbf{lstv \underline{name}} - \underline{name} is a file or directory name, and lstv lists all the versions of it with correspondent timestamps.
 \end{itemize}
 In our consideration, there is another layer between the VFS and users. The application in that layer translates annoy things like timestamp to more user-friendly interfaces such as index search. Therefore, for simplicity, the VFS only provides uniformed timestamp interface.
-\section{Analysis}
-\subsection{Use Cases}
-\subsection{Alternative Approach}
-\section{Conclusion}
-\section{Acknowledgment}
+\section*{3~~~~Analysis}
+\section*{3.1~~~~Use Cases}
+\section*{3.1.1~~~~Search}
+When users search a string across all versions of a file, there are two strategy to accomplish this task.\\[1em]
+The first one is searching all versions thoroughly. The system get the current inode of the file to search, scanning all the blocks of it,  then going through the inode linked list and searching all blocks of each inode.\\[1em]
+The second approach does not search search all the blocks to save time. When the system has finished searching the blocks of one inode and begins to search the next inode, it only searches the blocks that has been changed according to the bitmap of the last inode.\\[1em]
+It seems that the first strategy is naive, but it always gives the right answer. However, the second strategy may be skip the answer when the target string is too long to fit in a block or occasionally across  two blocks. So we need some complex mechanism to handle this problem. As a result, if the overhead of that mechanism is not big and works well, we choose the second one. If not, the first one is chose according to 'Correctness comes first.' principle.\\[1em]
+When users search a string across all the file system, we can also search all blocks of inodes or skip the same block in different version or even in different files with complex method. The trade-off is similarly to  the above one.
+\section*{3.1.2~~~~Truncate}
+Truncate is a frequent file system operation, it is very common to see that applications or users truncate a file to zero length to rewrite that file again and again. If there is no bitmaps in the inode, we will deallocate all truncated blocks and allocate new blocks which leads to waste space and let the block of a file become more separate. With checking the bitmap, the system deallocates only those blocks that have been written in the current open progress instead of allocating new blocks to duplicated COW. Therefore, although bitmaps cost a relative big space, it is very useful to optimize truncating time and save a huge memory space.
+\section*{3.1.3~~~~Multithreads and Log File}
+One advantage of the COW execution flow is that it is not influenced by multithreads. If different threads of an server program open the log file simultaneously, then they will get their own duplicated inode, allocate their own new blocks and generate separate versions. It enforces the isolation between different threads and different versioning inodes under processing.
+\section*{3.1.4~~~~Repeatedly Writie}
+\section*{3.2~~~~Alternative Approaches}
+\section*{4~~~~Conclusion}
 \end{document}
