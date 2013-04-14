@@ -102,12 +102,11 @@ In Unix file system, we treat file and directory as inode on the disk. Similarly
 \paragraph{Timestamp}When a new version is created, a unsigned integer is recorded, representing the number of seconds passed since a epoch which is predefined in the system. If the unsigned integer is 32 bit, the timestamp allows the system to represent about 132 years after the epoch(typically 1970.1.1) which is enough to current system, and it is easy to extend to 64 bit when we need to represent more time. 
 \paragraph{Bitmap}The system embeds bitmaps in inodes and indirect blocks that allow system to record which blocks have had a copy-on-write performed which will discuss in memory management section. A bit of value 0 indicates that a new block needs to be allocated on the next write and bit value 1 indicates that a new allocation of this block has been performed. The size of Bitmap is mainly the overhead of extra fields but we think it worth costing it to optimize performance for its three uses mentioned below.
 \paragraph{Next}A pointer to the next old version of an inode. Through this field, we can search a specific version of an inode like an linked list, and the current version inode is the head of linked list. Since the performance of it may not so considerable, a optimized structure will discuss in layout section.
-\paragraph{Record}When a user want excludes a file or directory from versioning, an extra bit is employed to indicate it. a bit of value 0 is versioning which is default, and one is not versioning. When the system wants to create a new version, it will first exam this bit and decide whether to do subsequent things.
-\paragraph{Head Pointer}A pointer to a block containing addresses of the head of sublists of inodes discussed in layout section. \\[1em]
+\paragraph{Root Pointer}A pointer to a block containing addresses of the root list of B+-tree layout structure discussed in layout section. \\[1em]
 Since the size of inode  is fixed(typically 2K in fast file system), the number of indirect block pointer fields will decrease after adding new fields and it will result in reduced max file size under approximately 10\% which is acceptable.\\[1em]
-Although Record and Head Pointer field is only used in current version inode and waste some space in old versions, the old version is read only and inode is fixed size. Consequently, it is meaningless to free these fields in the old version inode.
+Although the Root Pointer field is only used in current version inode and waste some space in old versions, the old version is read only and inode is fixed size. Consequently, it is meaningless to free these fields in the old version inode.
 \section*{2.2.2~~~~In-memory Structure}
-
+The in-memory structure of the system is similarly to the origin Unix file system which containing a open file table which points to its vnode. In VFS, the in-memory copy of an inode is always kept up-to-date with the current version, allowing quick access for standard operations since the number of operations of current file is dominated. To ensure that the current version can always be accessed directly off the disk, the VFS could check it on a cache flush. 
 \section*{2.2~~~~Memory Management}
 \section*{2.2.1~~~~Copy-on-write}
 \begin{figure}[!ht]
@@ -121,23 +120,34 @@ When a new version is created, it is too waste to copy all the block in the old 
 \item When users finally closed the file, the system check whether the bitmap is all zero. If it is, it means nothing changes and the new inode will free. Otherwise, a new version of inode is finished.
 \end{enumerate}
 \section*{2.2.2~~~~Garbage Collection} 
-When the disk is almost full(A predefined constant such as 90\%), the system also support garbage collection by repeatedly scanning inode table and freeing the oldest inode sublist(discussed in layout section) of each current inode till the space decreased to another predefined constant such as 80\%.
+When the disk is almost full(A predefined constant such as 90\%), the system also support garbage collection by repeatedly scanning inode table and freeing the oldest inode sublist in the layout structure(discussed in section2.3) of each current inode till the space decreased to another predefined constant such as 80\%.
 \section*{2.3~~~~Layout}
-The problem that the length of a linked inodes list may be very long will cost more time to find a specific old version. Hence, a optimized layout is introduced to solve this problem.
-\section*{2.3.1~~~~B-tree Layout}
+Considering there will be a large quantity of version, the of work searching for a target version will be difficult and cost a lot of time. A structure that maintains all versions is obviously needed. 
+\section*{2.3.1~~~~B+-tree Structure}
+\begin{figure}[!ht]
+\includegraphics{bplus.jpg}
+\caption{B+-tree Layout}
+\end{figure}To solve the searching problem, we use B+-tree structure to maintain these versions in our file system. As the figure3 shows, the tree uses timestamp to be the key and inode to be the value, and stores all the value in the leaf-nodes. When searching a certainly version, it will start at the root and straightly to the leaf, with the binary search in each node. For finding the target inode number, it costs time $\Theta$(lgn). \\[1em]
+To store the structure, we use a few blocks (referred as log-block in the following report) to store it. As shown in the figure4, at the head of the block, there are two interfaces, one is the pointer of current file while the other is the pointer of the root of the B+-tree.\\[1em]
+\begin{figure}[!ht]
+\includegraphics{logblock1.jpg}
+\includegraphics{logblock2.jpg}
+\caption{Log-block Structure}
+\end{figure}
+For the purpose of maximizing the effect of B+-tree, each log-block only stores a single node. As we study in the ICS course, when accessing a value in disk, it loads the whole block in the memory. B+-tree puts a few values in a single node according to the phenomenon. As a non-leaf node, it stores keys/log-block numbers in the field. The leaf node stores the keys and inode number of file instead.
 \section*{2.3.2~~~~ Abandoned Sublists-only Layout}
 \begin{figure}[!ht]
 \includegraphics{linkedlist.png}
 \caption{Sublists-only Layout}
 \end{figure}
-When the length of linked inode list exceeds a predefined number k, the system divides it into small sublists. The head of each sublist which contains the address of first inode in the sublist and its timestamp is recorded in a block mentioned in data structure section(Figure 3). When the user find a version of file with given timestamp, the system use the timestamp as a key and search the sublist containing that inode efficiently with a function.
+When the length of linked inode list exceeds a predefined number k, the system divides it into small sublists. The head of each sublist which contains the address of first inode in the sublist and its timestamp is recorded in a block in the inode structure(Figure 5). When the user find a version of file with given timestamp, the system use the timestamp as a key and search the sublist containing that inode efficiently with a function. We abandon this method because this effective function does not exist. 
 \section*{2.4~~~~Interfaces and Manipulating Old Versions}
 \section*{2.4.1~~~~File System Operation}
 The system supports all the standard Unix file system operations as follows:
 \begin{itemize}
 \item \textbf{write} - When write something, the system will check the bitmap, then COW is triggered to allocate new blocks or only update the newly allocated blocks.
-\item \textbf{open} - A new inode is duplicated with different inode number and some other fields, but they share the same block pointers. If a read-only file is opened or the Record field is one, the system dose not duplicated the inode like the Unix file system.
-\item \textbf{create} - A new inode is created as Unix file system. However, user can explicitly set the the file is not versioning which sets the Record field to one. Finally the directory containing it will do versioning too.
+\item \textbf{open} - A new inode is duplicated with different inode number and some other fields, but they share the same block pointers. If a read-only file is opened or the Root field is null, the system dose not duplicated the inode like the Unix file system.
+\item \textbf{create} - A new inode is created as Unix file system. However, user can explicitly set the the file is not versioning which sets the Root field to null. Finally the directory containing it will do versioning too.
 \item \textbf{close} - Check bitmap to decide whether the system free the inode. If not, add timestamp, next fields and do correspondent layout operation.
 \item \textbf{rename} - Combination with unlink and link as follows.
 \item \textbf{unlink} - If link count drops to zero, the inode will not free and the user can still access the old version of that unlinked file.
@@ -146,7 +156,7 @@ The system supports all the standard Unix file system operations as follows:
 \end{itemize}
 \section*{2.4.2~~~~Accessing Old Version}
 User can access any version of file or directories by appending @ and timestamp, such as:  \textbf{cd /home/sb@362480234}\\[1em]When the system resolve the file or directory names, it reads from right to left and regard the last @ and number as version specifier. Hence, it can distinguish the version specifier from @ and numbers in its origin name.\\[1em]
-When the system gets wrong timestamp, it will search the inode sublist and give a nearest version.\\[1em]
+When the system gets wrong timestamp, it will search the inode layout structure and give a nearest version.\\[1em]
 To meet the demand that users want to know how many versions created. A new operations is  introduced:
 \begin{itemize}
 \item \textbf{lstv \underline{name}} - \underline{name} is a file or directory name, and lstv lists all the versions of it with correspondent timestamps.
@@ -158,7 +168,7 @@ In our consideration, there is another layer between the VFS and users. The appl
 When users search a string across all versions of a file, there are two strategy to accomplish this task.\\[1em]
 The first one is searching all versions thoroughly. The system get the current inode of the file to search, scanning all the blocks of it,  then going through the inode linked list and searching all blocks of each inode.\\[1em]
 The second approach does not search search all the blocks to save time. When the system has finished searching the blocks of one inode and begins to search the next inode, it only searches the blocks that has been changed according to the bitmap of the last inode.\\[1em]
-It seems that the first strategy is naive, but it always gives the right answer. However, the second strategy may be skip the answer when the target string is too long to fit in a block or occasionally across  two blocks. So we need some complex mechanism to handle this problem. As a result, if the overhead of that mechanism is not big and works well, we choose the second one. If not, the first one is chose according to 'Correctness comes first.' principle.\\[1em]
+It seems that the first strategy is naive, but it always gives the right answer. However, the second strategy may be skip the answer when the target string is too long to fit in a block or occasionally across  two blocks. So we need some complex mechanism(such as check the length of string first and choose appropriate number of blocks as smallest unit to search) to handle this problem. As a result, if the overhead of that mechanism is not big and works well, we choose the second one. If not, the first one is chose according to 'Correctness comes first.' principle.\\[1em]
 When users search a string across all the file system, we can also search all blocks of inodes or skip the same block in different version or even in different files with complex method. The trade-off is similarly to  the above one.
 \section*{3.1.2~~~~Truncate}
 Truncate is a frequent file system operation, it is very common to see that applications or users truncate a file to zero length to rewrite that file again and again. If there is no bitmaps in the inode, we will deallocate all truncated blocks and allocate new blocks which leads to waste space and let the block of a file become more separate. With checking the bitmap, the system deallocates only those blocks that have been written in the current open progress instead of allocating new blocks to duplicated COW. Therefore, although bitmaps cost a relative big space, it is very useful to optimize truncating time and save a huge memory space.
@@ -171,16 +181,19 @@ Since the system duplicate inode to create new version, if the overhead of inode
 \item \textbf{Case2} -  Repeatedly writing a block of a large file\\
 Thanks to COW and the inode space can be ignored when file is large, we only allocate one more block per versioning in this situation which is ideal and cam also be ignored.
 \end{itemize}
+\section*{3.1.5~~~~Exclude Files From Versioning}
+When a user want excludes a file or directory from versioning, the system sets the root field in the inode structure to null, since the root field and the layout structure is useless when there is no versioning. But the side-effect is that if the user exclude an exist versioning file from versioning, the system will free all its old versions and we consider it is acceptable. \\[1em]
+Another method is that we introduce a new field indicating whether the file is versioning. The advantage of it is that it maintains old version in the above case, and the drawback is that it spends extra space which we think is unnecessary.
 \section*{3.2~~~~Alternative Approach}
 \begin{figure}[!ht]
 \includegraphics{journal4.png}
 \caption{No Inode Duplication Approach}
 \end{figure}
-There is another promising approach realizing VFS without duplicating the inode. Only an inode is used to represent all versions of a file. There is no timestamp, bitmap, next fields in the inode but it has a pointer which points to a series of blocks containing many bitmaps. each bitmap makes changed blocks according to last version. If users want to get an indexed old version, the system will retrieve the blocks according to each bitmap one version by one version(Figure 5).\\[1em]
+There is another promising approach realizing VFS without duplicating the inode. Only an inode is used to represent all versions of a file. There is no timestamp, bitmap, next fields in the inode but it has a pointer which points to a series of blocks containing many bitmaps. each bitmap makes changed blocks according to last version. If users want to get an indexed old version, the system will retrieve the blocks according to each bitmap one version by one version(Figure 6).\\[1em]
 It is obviously that this approach saves the space of inode, but it will cost huge time to retrieve an old version. In our consideration, the less retrieving time is more important than the bigger space of metadata. However, if there is optimized mechanism based on this approach which reduce retrieving time, we will then select this one. In conclusion, the duplicated inodes strategy is more suitable to VFS under the current research situation.   
 \section*{4~~~~Conclusion}
 The above design meets the requirements as outlined in the problem statement mainly by duplicated inodes and COW strategy. The remaining problem is a correct edge check in searching and cache related issue. Perfect unduplicated inode approach and failure tolerance are further research. \\[15em]
 
-Word Count:2500(not include title page)
+Word Count:2483(exclude title page)
 
 \end{document}
