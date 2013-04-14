@@ -106,7 +106,7 @@ In Unix file system, we treat file and directory as inode on the disk. Similarly
 Since the size of inode  is fixed(typically 2K in fast file system), the number of indirect block pointer fields will decrease after adding new fields and it will result in reduced max file size under approximately 10\% which is acceptable.\\[1em]
 Although the Root Pointer field is only used in current version inode and waste some space in old versions, the old version is read only and inode is fixed size. Consequently, it is meaningless to free these fields in the old version inode.
 \section*{2.2.2~~~~In-memory Structure}
-The in-memory structure of the system is similarly to the origin Unix file system which containing a open file table which points to its vnode. In VFS, the in-memory copy of an inode is always kept up-to-date with the current version, allowing quick access for standard operations since the number of operations of current file is dominated. To ensure that the current version can always be accessed directly off the disk, the VFS could check it on a cache flush. 
+The in-memory structure of the system is similarly to the origin Unix file system which containing a open file table which points to its vnode. Except that, in the in-memory structure, there is a copy of inode which is always kept up-to-date with the current version, allowing quick access for standard operations since the number of operations of current file is dominated. To ensure that the current version can always be accessed directly off the disk, the VFS could check it on a cache flush. 
 \section*{2.2~~~~Memory Management}
 \section*{2.2.1~~~~Copy-on-write}
 \begin{figure}[!ht]
