@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-This is pdfTeX, Version 3.1415926-2.4-1.40.13 (TeX Live 2012) (format=pdflatex 2012.6.30)  14 APR 2013 12:58
-=======
-This is pdfTeX, Version 3.1415926-2.4-1.40.13 (TeX Live 2012) (format=pdflatex 2012.6.30)  12 APR 2013 13:10
->>>>>>> ignore
+This is pdfTeX, Version 3.1415926-2.4-1.40.13 (TeX Live 2012) (format=pdflatex 2012.6.30)  14 APR 2013 20:34
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -218,12 +214,12 @@ e
 [1
 
 {/usr/local/texlive/2012/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
-<inode3.png, id=11, 344.78813pt x 434.37282pt>
-File: inode3.png Graphic file (type png)
- <use inode3.png>
-Package pdftex.def Info: inode3.png used on input line 98.
-(pdftex.def)             Requested size: 344.78728pt x 434.37175pt.
- [1] [2 <./inode3.png>] <cow2.png, id=18, 459.21562pt x 230.36063pt>
+<inode4.png, id=11, 319.94531pt x 343.2825pt>
+File: inode4.png Graphic file (type png)
+ <use inode4.png>
+Package pdftex.def Info: inode4.png used on input line 98.
+(pdftex.def)             Requested size: 319.94452pt x 343.28165pt.
+ [1] [2 <./inode4.png>] <cow2.png, id=18, 459.21562pt x 230.36063pt>
 File: cow2.png Graphic file (type png)
  <use cow2.png>
 Package pdftex.def Info: cow2.png used on input line 113.
@@ -307,7 +303,7 @@ dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2012/texmf-di
 st/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2012/texmf-dist
 /fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2012/texmf-dist/
 fonts/type1/public/amsfonts/cm/cmti12.pfb>
-Output written on title_page_1.pdf (12 pages, 199502 bytes).
+Output written on title_page_1.pdf (12 pages, 197412 bytes).
 PDF statistics:
  76 PDF objects out of 1000 (max. 8388607)
  47 compressed objects within 1 object stream

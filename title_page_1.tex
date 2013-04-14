@@ -95,7 +95,7 @@ The versioning file system(VFS) represents different versions of a file or direc
 \section*{2.1~~~~Data Structure}
 \section*{2.1.1~~~~On-disk Structure}
 \begin{figure}[!ht]
-\includegraphics{inode3.png}
+\includegraphics{inode4.png}
 \caption{Inode Structure}
 \end{figure}
 In Unix file system, we treat file and directory as inode on the disk. Similarly, VFS also use inode and there are several fields are added to it as mentioned below(Figure 1). 
@@ -127,7 +127,8 @@ Considering there will be a large quantity of version, the of work searching for
 \begin{figure}[!ht]
 \includegraphics{bplus.jpg}
 \caption{B+-tree Layout}
-\end{figure}To solve the searching problem, we use B+-tree structure to maintain these versions in our file system. As the figure3 shows, the tree uses timestamp to be the key and inode to be the value, and stores all the value in the leaf-nodes. When searching a certainly version, it will start at the root and straightly to the leaf, with the binary search in each node. For finding the target inode number, it costs time $\Theta$(lgn). \\[1em]
+\end{figure}
+To solve the searching problem, we use B+-tree structure to maintain these versions in our file system. As the figure3 shows, the tree uses timestamp to be the key and inode to be the value, and stores all the value in the leaf-nodes. When searching a certainly version, it will start at the root and straightly to the leaf, with the binary search in each node. For finding the target inode number, it costs time $\Theta$(lgn). \\[1em]
 To store the structure, we use a few blocks (referred as log-block in the following report) to store it. As shown in the figure4, at the head of the block, there are two interfaces, one is the pointer of current file while the other is the pointer of the root of the B+-tree.\\[1em]
 \begin{figure}[!ht]
 \includegraphics{logblock1.jpg}
