@@ -91,7 +91,7 @@ YuWei Zhou  \textsc{11302010067}\\[3cm]% Your name
 
 \section*{1~~~~Introduction}The goal of this design project is to create a versioning file system. The versioning or continuous snapshotting file system is defined to store all versions of each file over time. When users modify a file or  a directory, the versioning file system create a new version after closing the file or directory and store the old version which can be only read by users. \\[1em]To implement this system, The whole design will solve two major problem: how to maintain the old version and how to manipulate them, as well as achieving low access time and better space utilization under common use cases.
 \section*{2~~~~Design Description}
-The versioning file system(VFS) represents different versions of a file or directory as different inodes which is based on the inodes in Unix file system. Therefore, we need add extra fields to origin inode data structure. Then, a new layout and management is required to maintain the huge number of inodes and data blocks. Finally, some interfaces is adopted to let users manipulate different versions easily.
+The versioning file system(VFS) represents different versions of a file or directory as different inodes which is based on the ones in Unix file system. Therefore, we need add extra fields to origin inode data structure. Then, a new layout and management is required to maintain the huge number of inodes and data blocks. Finally, some interfaces is adopted to let users manipulate different versions easily.
 \section*{2.1~~~~Data Structure}
 \section*{2.1.1~~~~On-disk Structure}
 \begin{figure}[!ht]
@@ -105,8 +105,8 @@ In Unix file system, we treat file and directory as inode on the disk. Similarly
 \paragraph{Root Pointer}A pointer to a block containing addresses of the root list of B+-tree layout structure discussed in layout section(2.3). \\[1em]
 Since the size of inode  is fixed(typically 2K in the fast file system), the number of indirect block pointer fields will decrease after adding new fields and it will result in reduced max file size under approximately 10\% which we think is acceptable.\\[1em]
 Although the Root Pointer field is only used in current version inode and waste some space in old versions, the old version is read only and inode is fixed size. Consequently, it is meaningless to free these fields in the old version inode.
-\section*{2.2.2~~~~In-memory Structure}
-The in-memory structure of VFS is similarly to the origin Unix file system which containing a open file table which points to its vnode. Except that, in the VFS in-memory structure, there is a copy of an inode which is always kept up-to-date with the current version, allowing quick access for standard operations since the number of operations of current file is dominated. To ensure that the current version can always be accessed directly off the disk, the VFS could check it on a cache flush. 
+\section*{2.1.2~~~~In-memory Structure}
+The in-memory structure of VFS is similarly to the origin Unix file system which containing a open file table which points to its vnode. Besides, in the VFS in-memory structure, there is a copy of an inode which is always kept up-to-date with the current version, allowing quick access for standard operations since the number of operations of current file is dominated. To ensure that the current version can always be accessed directly off the disk, the VFS could check it on a cache flush. 
 \section*{2.2~~~~Memory Management}
 \section*{2.2.1~~~~Copy-on-write}
 \begin{figure}[!ht]
@@ -120,7 +120,7 @@ When a new version is created, it is too waste to copy all the block in the old 
 \item When users finally closed the file, VFS checks whether the bitmap is all zero. If it is, it means nothing changes and the new inode will free. Otherwise, a new version of inode is finished.
 \end{enumerate}
 \section*{2.2.2~~~~Garbage Collection} 
-When the disk is almost full(A predefined constant such as 90\%), VFS also support garbage collection by repeatedly scanning inode table and freeing the oldest inode sublist in the layout structure(discussed in section2.3) of each current inode till the space decreased to another predefined constant such as 80\%.
+When the disk is almost full(A predefined constant such as 90\%), VFS also support garbage collection by repeatedly scanning every file and freeing the oldest inode sublist in the layout structure(discussed in section2.3) of each current inode till the space decreased to another predefined constant such as 80\%.
 \section*{2.3~~~~Layout}
 Considering there will be a large quantity of version, the of work searching for a target version will be difficult and cost a lot of time. A structure that maintains all versions is obviously needed. 
 \section*{2.3.1~~~~B+-tree Structure}
@@ -128,14 +128,16 @@ Considering there will be a large quantity of version, the of work searching for
 \includegraphics{bplus.jpg}
 \caption{B+-tree Layout}
 \end{figure}
-To solve the searching problem, we use B+-tree structure to maintain these versions in our file system. As the figure3 shows, the tree uses timestamp to be the key and inode to be the value, and stores all the value in the leaf-nodes. When searching a certainly version, it will start at the root and straightly to the leaf, with the binary search in each node. For finding the target inode number, it costs time $\Theta$(lgn). \\[1em]
-To store the structure, we use a few blocks (referred as log-block in the following report) to store it. As shown in the figure4, at the head of the block, there are two interfaces, one is the pointer of current file while the other is the pointer of the root of the B+-tree.\\[1em]
+To solve the searching problem, we use B+-tree structure(b-ary) to maintain these versions in our file system. As the figure3 shows, the tree uses timestamp as the key and inode as the value, and stores all the value in the leaf-nodes. Every node has b elements at most so that the height of the tree is $\Theta$(log$_b$n). \\[1em]
+To store the structure, we use a few blocks including head-block(root-block) and log-block .As shown in the 4, in head-block, which is pointed by every current version inode, there are two interfaces, one is the pointer of the oldest version which has the least value while the other is the pointer of the root of the B+-tree. Each log-block only stores a single node. In a non-leaf node, it stores b-1 values of sub-intervals helping search its b children in the field. The leaf node stores the keys and inode number of file instead. Besides, every leaf node stores a pointer of the next leaf node of it, which forms a linked list from the oldest version to the latest one.\\[1em]
 \begin{figure}[!ht]
 \includegraphics{logblock1.jpg}
 \includegraphics{logblock2.jpg}
+\includegraphics{head.png}
 \caption{Log-block Structure}
 \end{figure}
-For the purpose of maximizing the effect of B+-tree, each log-block only stores a single node. As we study in the ICS course, when accessing a value in disk, it loads the whole block in the memory. B+-tree puts a few values in a single node according to the phenomenon. As a non-leaf node, it stores keys/log-block numbers in the field. The leaf node stores the keys and inode number of file instead.
+For the purpose of maximizing the effect of B+-tree, we put every log-block into a real block on the disk. Consequently, the maximum size of one node is predefined which determines the value of b. As we study in the ICS course, when accessing a value in disk, it loads the whole block into the memory. Hence our B+-tree decreases time wasting to a large extent when searching old versions. \\[1em]
+Our data structure for manipulating versions has two main function. When searching a certainly version, it will start at the root and directly to the leaf, with the binary search in each node to determine the index to enter. For finding the target inode number, it costs time  $\Theta$(lgn).When the garbage collection is undergoing, it will start at the oldest version, do corresponding operations, and search the next one along the linked list we discussed about above.
 \section*{2.3.2~~~~ Abandoned Sublists-only Layout}
 \begin{figure}[!ht]
 \includegraphics{linkedlist.png}
@@ -195,7 +197,7 @@ Another method is that we introduce a new field indicating whether the file is v
 There is another promising approach realizing VFS without duplicating the inode. Only an inode is used to represent all versions of a file. There is no timestamp, bitmap, next fields in the inode but it has a pointer which points to a series of blocks containing many bitmaps. each bitmap makes changed blocks according to last version. If users want to get an indexed old version, VFS will retrieve the blocks according to each bitmap one version by one version(Figure 6).\\[1em]
 It is obviously that this approach saves the space of inode, but it will cost huge time to retrieve an old version. In our consideration, the less retrieving time is more important than the bigger space of metadata. However, if there is optimized mechanism based on this approach which reduce retrieving time, we will then select this one. In conclusion, the duplicated inodes strategy is more suitable to VFS under the current research situation.   
 \section*{4~~~~Conclusion}
-The above design meets the requirements as outlined in the problem statement mainly by duplicated inodes and COW strategy. The remaining problem is a correct edge check in searching and cache related issue. Perfect unduplicated inode approach and failure tolerance are further research. \\
-Word Count:2483(exclude title page and section numbers)
+The above design meets the requirements as outlined in the problem statement mainly by duplicated inodes and COW strategy. The remaining problem is a correct edge check in searching and cache related issue. Perfect unduplicated inode approach and failure tolerance are further research. \\[5em]
+Word Count:2536(exclude title page and section numbers)
 
 \end{document}
